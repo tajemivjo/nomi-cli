@@ -192,7 +192,7 @@ var chatCmd = &cobra.Command{
 			}
 
 			// Display the reply
-			fmt.Printf("Nomi: %s\n", chatResponse.ReplyMessage.Text)
+			fmt.Printf("%s: %s\n", name, chatResponse.ReplyMessage.Text)
 		}
 	},
 }
