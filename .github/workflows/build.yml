@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*' # Trigger on version tags, e.g., v1.0.0
+      - "v*" # Trigger on version tags, e.g., v1.0.0
   workflow_dispatch: # Allow manual triggering of the workflow
 
 permissions:
@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         goos: [linux, windows, darwin] # Target operating systems
-        goarch: [amd64, arm64]         # Target architectures
+        goarch: [amd64, arm64] # Target architectures
 
     steps:
       - name: Checkout code
@@ -26,7 +26,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.20'
+          go-version: "1.23"
 
       - name: Download dependencies
         run: go mod tidy
@@ -37,7 +37,7 @@ jobs:
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o dist/nomi-cli-${{ matrix.goos }}-${{ matrix.goarch }}
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: dist/
