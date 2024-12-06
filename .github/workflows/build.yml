@@ -6,6 +6,9 @@ on:
       - 'v*' # Trigger on version tags, e.g., v1.0.0
   workflow_dispatch: # Allow manual triggering of the workflow
 
+permissions:
+  contents: write # Grant write permissions for releases
+
 jobs:
   build:
     name: Build for Multiple Platforms
@@ -23,11 +26,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.23' # Specify a Go version that supports modules
+          go-version: '1.20'
 
       - name: Download dependencies
-        run: |
-          go mod tidy
+        run: go mod tidy
 
       - name: Build binary
         run: |
@@ -37,8 +39,8 @@ jobs:
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: nomi-cli-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist/nomi-cli-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: build-artifacts
+          path: dist/
 
   release:
     name: Create Release
@@ -51,6 +53,8 @@ jobs:
 
       - name: Download build artifacts
         uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
