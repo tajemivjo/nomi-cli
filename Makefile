@@ -5,6 +5,10 @@ all: build
 build:
 	go build -o nomi-cli
 
+# Install the CLI to $GOPATH/bin
+install: build
+	go install
+
 # Clean build artifacts
 clean:
 	rm -f nomi-cli
@@ -26,4 +30,4 @@ test-coverage:
 test-coverage-text:
 	go test -v -cover ./...
 
-.PHONY: all build clean deps test test-coverage test-coverage-text
+.PHONY: all build clean deps test test-coverage test-coverage-text install
