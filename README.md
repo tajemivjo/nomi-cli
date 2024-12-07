@@ -2,6 +2,8 @@
 
 The `Nomi CLI` is a command-line tool for interacting with the [Nomi.ai API](https://api.nomi.ai/), allowing users to manage and chat with their Nomis directly from the terminal. This tool is designed for developers and enthusiasts who want to seamlessly integrate Nomi.ai's capabilities into their workflows.
 
+![Nomi CLI Screenshot](./docs/images/nomi-cli-005-screenshot.png)
+
 ## Features
 
 - **List Nomis**:
