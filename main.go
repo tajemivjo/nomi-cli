@@ -10,18 +10,6 @@ import (
 var apiKey string  // Store the API key globally
 var baseURL string // Store the base API URL globally
 
-type Nomi struct {
-	UUID             string `json:"uuid"`
-	Gender           string `json:"gender"`
-	Name             string `json:"name"`
-	Created          string `json:"created"`
-	RelationshipType string `json:"relationshipType"`
-}
-
-type NomiResponse struct {
-	Nomis []Nomi `json:"nomis"`
-}
-
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "nomi-cli",
@@ -53,6 +41,7 @@ func main() {
 	rootCmd.AddCommand(listNomisCmd)
 	rootCmd.AddCommand(getNomiCmd)
 	rootCmd.AddCommand(chatCmd)
+	rootCmd.AddCommand(listRoomsCmd)
 
 	// Execute the root command
 	if err := rootCmd.Execute(); err != nil {
