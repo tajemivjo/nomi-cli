@@ -30,6 +30,14 @@ type ChatResponse struct {
 	ReplyMessage Message `json:"replyMessage"`
 }
 
+const (
+	colorReset  = "\033[0m"
+	colorGreen  = "\033[32m"
+	colorBlue   = "\033[34m"
+	colorYellow = "\033[33m"
+	colorCyan   = "\033[36m"
+)
+
 // clearScreen clears the terminal screen based on the OS.
 func clearScreen() {
 	switch runtime.GOOS {
@@ -88,7 +96,7 @@ func findNomiByName(name string) (string, error) {
 
 // spinner displays a spinning wheel animation while waiting for a response.
 func spinner(stopChan chan bool) {
-	chars := []rune{'|', '/', '-', '\\'}
+	chars := []string{"-", "\\", "|", "/"} // Simple classic spinner
 	for {
 		select {
 		case <-stopChan:
@@ -99,8 +107,8 @@ func spinner(stopChan chan bool) {
 				case <-stopChan:
 					return
 				default:
-					fmt.Printf("\r%c", char)
-					time.Sleep(100 * time.Millisecond)
+					fmt.Printf("\r%s%s%s", colorCyan, char, colorReset)
+					time.Sleep(100 * time.Millisecond) // Slightly slower rotation
 				}
 			}
 		}
@@ -129,12 +137,13 @@ var chatCmd = &cobra.Command{
 		// Clear the terminal at the start of the chat
 		clearScreen()
 
-		fmt.Println("Chat session started with", name+". Type your message and press Enter to send.")
-		fmt.Println("Type 'exit' to end the session.")
+		fmt.Printf("\n%s=== Chat Session with %s ===%s\n", colorYellow, name, colorReset)
+		fmt.Printf("%s• Type your message and press Enter to send\n", colorBlue)
+		fmt.Printf("• Type 'exit' to end the session%s\n\n", colorReset)
 
 		scanner := bufio.NewScanner(os.Stdin)
 		for {
-			fmt.Print("You: ")
+			fmt.Printf("%sYou%s: ", colorGreen, colorReset)
 			if !scanner.Scan() {
 				break
 			}
@@ -192,7 +201,7 @@ var chatCmd = &cobra.Command{
 			}
 
 			// Display the reply
-			fmt.Printf("\033[1m%s\033[0m: %s\n", name, chatResponse.ReplyMessage.Text)
+			fmt.Printf("%s%s%s: %s\n", colorBlue, name, colorReset, chatResponse.ReplyMessage.Text)
 		}
 	},
 }
