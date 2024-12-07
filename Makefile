@@ -1,10 +1,12 @@
 # Default target builds the CLI
 all: build
 
+VERSION := $(shell git describe --tags --always --dirty)
+
 # Build the CLI
 build:
-	go build -o nomi-cli
-
+	go build -ldflags "-X main.Version=$(VERSION)" -o nomi-cli
+	
 # Install the CLI to $GOPATH/bin
 install: build
 	go install
