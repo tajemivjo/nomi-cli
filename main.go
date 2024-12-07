@@ -42,6 +42,7 @@ func main() {
 	rootCmd.AddCommand(getNomiCmd)
 	rootCmd.AddCommand(chatCmd)
 	rootCmd.AddCommand(listRoomsCmd)
+	rootCmd.AddCommand(versionCmd)
 
 	// Execute the root command
 	if err := rootCmd.Execute(); err != nil {
