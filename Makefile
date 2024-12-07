@@ -13,4 +13,17 @@ clean:
 deps:
 	go mod download
 
-.PHONY: all build clean deps
+# Run tests
+test:
+	go test -v ./...
+
+# Run tests with coverage
+test-coverage:
+	go test -v -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+
+# Run tests and show coverage in terminal
+test-coverage-text:
+	go test -v -cover ./...
+
+.PHONY: all build clean deps test test-coverage test-coverage-text
