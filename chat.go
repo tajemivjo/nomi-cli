@@ -192,7 +192,7 @@ var chatCmd = &cobra.Command{
 			}
 
 			// Display the reply
-			fmt.Printf("%s: %s\n", name, chatResponse.ReplyMessage.Text)
+			fmt.Printf("\033[1m%s\033[0m: %s\n", name, chatResponse.ReplyMessage.Text)
 		}
 	},
 }
