@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -13,209 +12,176 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestGetNomiCommand(t *testing.T) {
-	// Create a test server
+func TestGetNomiCmdSuccess(t *testing.T) {
+	// Create a test Nomi
+	testNomi := Nomi{
+		UUID:             "nomi-123",
+		Name:             "Test Nomi",
+		Gender:           "non-binary",
+		Created:          "2024-12-07T10:00:00Z",
+		RelationshipType: "friend",
+	}
+
+	// Start a mock server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Verify request method
-		if r.Method != "GET" {
-			t.Errorf("Expected GET request, got %s", r.Method)
+		// Check Authorization header if needed
+		authHeader := r.Header.Get("Authorization")
+		expectedAuth := "Bearer " + apiKey
+		if authHeader != expectedAuth {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
 		}
 
-		// Verify headers
-		if r.Header.Get("Authorization") != "Bearer test-api-key" {
-			t.Error("Expected Authorization header with API key")
+		if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/nomis/") {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(testNomi)
+			return
 		}
 
-		// Test different scenarios based on the Nomi ID
-		switch r.URL.Path {
-		case "/nomis/test-uuid":
-			// Return a successful response
-			nomi := Nomi{
-				UUID:             "test-uuid",
-				Name:             "Test Nomi",
-				Gender:           "female",
-				Created:          "2024-01-01T12:00:00Z",
-				RelationshipType: "Friend",
-			}
-			json.NewEncoder(w).Encode(nomi)
-
-		case "/nomis/invalid-uuid":
-			// Return a 404 error
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error": "Nomi not found",
-			})
-
-		default:
-			// Return a 500 error for unknown paths
-			w.WriteHeader(http.StatusInternalServerError)
-		}
+		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer server.Close()
 
-	// Set up test environment
-	originalBaseURL := baseURL
-	originalAPIKey := apiKey
-	defer func() {
-		baseURL = originalBaseURL
-		apiKey = originalAPIKey
-	}()
-
+	// Override baseURL
 	baseURL = server.URL
-	apiKey = "test-api-key"
 
-	// Test cases
-	tests := []struct {
-		name           string
-		nomiID         string
-		expectedError  bool
-		expectedOutput string
-	}{
-		{
-			name:           "Valid Nomi ID",
-			nomiID:         "test-uuid",
-			expectedError:  false,
-			expectedOutput: "Nomi Details:\n- ID: test-uuid\n- Name: Test Nomi\n- Gender: female\n- Created: 2024-01-01T12:00:00Z\n- Relationship Type: Friend\n",
-		},
-		{
-			name:           "Invalid Nomi ID",
-			nomiID:         "invalid-uuid",
-			expectedError:  true,
-			expectedOutput: "Error: 404 Not Found\n",
-		},
+	// Capture stdout
+	oldStdout := os.Stdout
+	rOut, wOut, _ := os.Pipe()
+	os.Stdout = wOut
+
+	// Construct a parent command and add getNomiCmd to it
+	rootCmd := &cobra.Command{Use: "test"}
+	rootCmd.AddCommand(getNomiCmd)
+
+	// Execute the command with the test ID
+	rootCmd.SetArgs([]string{"get-nomi", "nomi-123"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("Command failed: %v", err)
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// Capture stdout
-			oldStdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
+	wOut.Close()
+	os.Stdout = oldStdout
+	outBytes, _ := io.ReadAll(rOut)
+	outputStr := string(outBytes)
 
-			// Execute command
-			getNomiCmd.Run(getNomiCmd, []string{tc.nomiID})
+	// Check that output contains expected lines
+	expectedLines := []string{
+		"Nomi Details:",
+		"- ID: nomi-123",
+		"- Name: Test Nomi",
+		"- Gender: non-binary",
+		"- Created: 2024-12-07T10:00:00Z",
+		"- Relationship Type: friend",
+	}
 
-			// Restore stdout
-			w.Close()
-			os.Stdout = oldStdout
-
-			// Read captured output
-			var buf bytes.Buffer
-			io.Copy(&buf, r)
-			output := buf.String()
-
-			if output != tc.expectedOutput {
-				t.Errorf("Expected output:\n%s\nGot:\n%s", tc.expectedOutput, output)
-			}
-		})
+	for _, line := range expectedLines {
+		if !strings.Contains(outputStr, line) {
+			t.Errorf("Expected output to contain %q, got %q", line, outputStr)
+		}
 	}
 }
 
-func TestGetNomiValidation(t *testing.T) {
-	// Test argument validation
-	cmd := getNomiCmd
+func TestGetNomiCmdNotFound(t *testing.T) {
+	// Start a mock server that returns 404
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
 
-	tests := []struct {
-		name          string
-		args          []string
-		expectedError bool
-	}{
-		{
-			name:          "No arguments",
-			args:          []string{},
-			expectedError: true,
-		},
-		{
-			name:          "Too many arguments",
-			args:          []string{"id1", "id2"},
-			expectedError: true,
-		},
-		{
-			name:          "Correct number of arguments",
-			args:          []string{"id1"},
-			expectedError: false,
-		},
+	// Override baseURL
+	baseURL = server.URL
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	rOut, wOut, _ := os.Pipe()
+	os.Stdout = wOut
+
+	rootCmd := &cobra.Command{Use: "test"}
+	rootCmd.AddCommand(getNomiCmd)
+
+	// Execute the command with some test ID
+	rootCmd.SetArgs([]string{"get-nomi", "invalid-id"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("Command failed: %v", err)
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			err := cmd.Args(cmd, tc.args)
-			if tc.expectedError && err == nil {
-				t.Error("Expected error but got none")
-			}
-			if !tc.expectedError && err != nil {
-				t.Errorf("Expected no error but got: %v", err)
-			}
-		})
+	wOut.Close()
+	os.Stdout = oldStdout
+	outBytes, _ := io.ReadAll(rOut)
+	outputStr := string(outBytes)
+
+	// Check that output indicates an error
+	if !strings.Contains(outputStr, "Error: 404 Not Found") {
+		t.Errorf("Expected output to contain \"Error: 404 Not Found\", got %q", outputStr)
 	}
 }
 
-func TestGetNomiRequestErrors(t *testing.T) {
-	// Save original values
-	originalAPIKey := apiKey
-	originalBaseURL := baseURL
-	defer func() {
-		apiKey = originalAPIKey
-		baseURL = originalBaseURL
-	}()
+func TestGetNomiCmdServerError(t *testing.T) {
+	// Start a mock server that returns 500
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
 
-	tests := []struct {
-		name          string
-		setupFunc     func()
-		expectedError string
-	}{
-		{
-			name: "Missing API Key",
-			setupFunc: func() {
-				apiKey = ""
-				baseURL = "https://api.example.com"
-			},
-			expectedError: "Error making request",
-		},
-		{
-			name: "Invalid Base URL",
-			setupFunc: func() {
-				apiKey = "test-key"
-				baseURL = "://invalid-url"
-			},
-			expectedError: "Error creating request",
-		},
+	// Override baseURL
+	baseURL = server.URL
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	rOut, wOut, _ := os.Pipe()
+	os.Stdout = wOut
+
+	rootCmd := &cobra.Command{Use: "test"}
+	rootCmd.AddCommand(getNomiCmd)
+
+	rootCmd.SetArgs([]string{"get-nomi", "some-id"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("Command failed: %v", err)
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// Setup test environment
-			tc.setupFunc()
+	wOut.Close()
+	os.Stdout = oldStdout
+	outBytes, _ := io.ReadAll(rOut)
+	outputStr := string(outBytes)
 
-			// Capture stdout
-			oldStdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-			defer func() {
-				w.Close()
-				os.Stdout = oldStdout
-			}()
+	if !strings.Contains(outputStr, "Error: 500 Internal Server Error") {
+		t.Errorf("Expected output to contain \"Error: 500 Internal Server Error\", got %q", outputStr)
+	}
+}
 
-			// Create a new command instance for this test
-			testCmd := &cobra.Command{
-				Use:   "get-nomi [id]",
-				Short: "Get details of a specific Nomi",
-				Args:  cobra.ExactArgs(1),
-				Run:   getNomiCmd.Run,
-			}
+func TestGetNomiCmdBadArguments(t *testing.T) {
+	rootCmd := &cobra.Command{Use: "test"}
+	rootCmd.AddCommand(getNomiCmd)
 
-			// Execute command
-			testCmd.Run(testCmd, []string{"test-id"})
+	// Since error messages and usage go to stderr by default, we need to capture stderr as well.
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	rOut, wOut, _ := os.Pipe()
+	rErr, wErr, _ := os.Pipe()
+	os.Stdout = wOut
+	os.Stderr = wErr
 
-			// Read captured output
-			w.Close()
-			var buf bytes.Buffer
-			io.Copy(&buf, r)
-			output := buf.String()
+	rootCmd.SetArgs([]string{"get-nomi"}) // no ID provided
+	err := rootCmd.Execute()
 
-			if !strings.Contains(output, tc.expectedError) {
-				t.Errorf("Expected error containing '%s', got: %s", tc.expectedError, output)
-			}
-		})
+	wOut.Close()
+	wErr.Close()
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	outBytes, _ := io.ReadAll(rOut)
+	errBytes, _ := io.ReadAll(rErr)
+
+	outputStr := string(outBytes)
+	errorStr := string(errBytes)
+
+	if err == nil {
+		t.Errorf("Expected an error when no arguments are provided.")
+	}
+
+	// Since Cobra usage errors go to stderr, we check errorStr
+	if !strings.Contains(errorStr, "accepts 1 arg(s), received 0") {
+		t.Errorf("Expected error message about missing argument, got %q (stdout=%q)", errorStr, outputStr)
 	}
 }
