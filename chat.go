@@ -38,7 +38,7 @@ const (
 	colorCyan   = "\033[36m"
 )
 
-// clearScreen clears the terminal screen based on the OS.
+// clearScreen clears the terminal screen and attempts to clear the scrollback buffer.
 func clearScreen() {
 	switch runtime.GOOS {
 	case "windows":
@@ -46,7 +46,11 @@ func clearScreen() {
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	default:
-		cmd := exec.Command("clear")
+		// First attempt using ANSI escape codes
+		fmt.Print("\033[H\033[2J\033[3J\033c")
+
+		// Fallback to tput if available
+		cmd := exec.Command("tput", "reset")
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
