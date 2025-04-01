@@ -18,7 +18,7 @@ func main() {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Load the API key from the environment variable if not provided as a flag
 			if apiKey == "" {
-				apiKey = os.Getenv("NOMI_API_KEY")
+				apiKey = os.Getenv("bb58e912-527d-40af-b585-00bfd684c603")
 			}
 
 			// Ensure an API key is available
